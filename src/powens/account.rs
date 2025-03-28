@@ -92,7 +92,7 @@ pub enum BankAccountUsage {
     NULL,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountType {
     /// Article 83.
@@ -142,13 +142,16 @@ pub enum AccountType {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Currency {
+    /// ex: EUR
     pub id: String,
+    /// ex: €
     pub symbol: String,
     pub prefix: bool,
     pub crypto: bool,
     pub precision: i64,
     pub marketcap: Value,
     pub datetime: Value,
+    /// ex: Euro
     pub name: String,
 }
 

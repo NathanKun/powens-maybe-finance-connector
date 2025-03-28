@@ -1,5 +1,6 @@
 use super::db_base::StructFileDb;
-use crate::powens::{Account, Transaction};
+use crate::powens::{Account, HasId, Sortable, Transaction};
+use serde::{Deserialize, Serialize};
 use tracing::info;
 
 pub type AccountsDb = StructFileDb<Account>;
@@ -19,5 +20,28 @@ impl TransactionsDb {
         let res = StructFileDb::<Transaction>::new("db/transaction.json".to_string());
         info!("Transactions DB initialized.");
         res
+    }
+}
+
+/**
+Extra data to add to a transaction, to form a complete Maybe-Finance transaction.
+*/
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransactionExtras {
+    /// to match the Transaction id
+    pub id: u64,
+    pub categories: Vec<String>,
+    pub tags: Vec<String>,
+}
+
+impl HasId for TransactionExtras {
+    fn id(&self) -> u64 {
+        self.id
+    }
+}
+
+impl Sortable for TransactionExtras {
+    fn sortable_value(&self) -> String {
+        self.id.to_string()
     }
 }

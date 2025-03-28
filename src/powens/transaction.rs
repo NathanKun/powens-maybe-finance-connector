@@ -52,6 +52,7 @@ pub struct Transaction {
     pub stemmed_wording: String,
 
     /// Label of the transaction, can be edited.
+    /// Seems to be the same of simplified_wording by default.
     pub wording: String,
 
     /// Date and time when the transaction was seen.

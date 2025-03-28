@@ -22,3 +22,19 @@ impl HasId for Account {
         self.id
     }
 }
+
+pub trait Sortable {
+    fn sortable_value(&self) -> impl Ord;
+}
+
+impl Sortable for Account {
+    fn sortable_value(&self) -> impl Ord {
+        self.id
+    }
+}
+
+impl Sortable for Transaction {
+    fn sortable_value(&self) -> impl Ord {
+        self.date.clone()
+    }
+}

@@ -1,19 +1,25 @@
 //! Base implementation of a File Database for Struct
 
-use crate::powens::HasId;
+use crate::powens::{HasId, Sortable};
 use serde_json;
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::sync::{Arc, Mutex};
-use tracing::info;
+use std::sync::{Arc, Mutex, MutexGuard};
+use tracing::{debug, info};
 
 #[derive(Clone)]
-pub struct StructFileDb<T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + HasId> {
+pub struct StructFileDb<T>
+where
+    T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone,
+{
     db: Arc<Mutex<BaseStructFileDb<T>>>,
 }
 
-impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + HasId> StructFileDb<T> {
+impl<T> StructFileDb<T>
+where
+    T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone,
+{
     pub fn new(file_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(StructFileDb::<T> {
             db: Arc::new(Mutex::new(BaseStructFileDb::<T>::new(file_path)?)),
@@ -40,6 +46,21 @@ impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + HasId> Str
         let mutex = self.db.lock().unwrap();
         mutex.data.is_empty()
     }
+}
+
+impl<T> StructFileDb<T>
+where
+    T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + HasId + Sortable,
+{
+    fn sort_and_save(
+        &self,
+        mutex: &mut MutexGuard<BaseStructFileDb<T>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        mutex
+            .data
+            .sort_by(|a, b| a.sortable_value().cmp(&b.sortable_value()));
+        mutex.save()
+    }
 
     pub fn find_by_id(&self, id: u64) -> Option<T> {
         let mutex = self.db.lock().unwrap();
@@ -49,27 +70,36 @@ impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + HasId> Str
     pub fn delete_by_id(&self, id: u64) -> Result<(), Box<dyn std::error::Error>> {
         let mut mutex = self.db.lock().unwrap();
         mutex.data.retain(|x| x.id() != id);
-        mutex.save()
+        self.sort_and_save(&mut mutex)
     }
 
     pub fn upsert(&self, data: T) -> Result<(), Box<dyn std::error::Error>> {
         let mut mutex = self.db.lock().unwrap();
         let index = mutex.data.iter().position(|x| x.id() == data.id());
         if let Some(index) = index {
+            debug!(
+                "Update {} with id {}", 
+                std::any::type_name::<T>(), 
+                &data.id()
+            );
             mutex.data[index] = data;
         } else {
+            debug!(
+                "Insert {} with id {}", 
+                std::any::type_name::<T>(), 
+                &data.id());
             mutex.data.push(data);
         }
-        mutex.save()
+        self.sort_and_save(&mut mutex)
     }
 }
 
-struct BaseStructFileDb<T: serde::Serialize + for<'de> serde::Deserialize<'de> + HasId> {
+struct BaseStructFileDb<T: serde::Serialize + for<'de> serde::Deserialize<'de>> {
     file_path: String,
     data: Vec<T>,
 }
 
-impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + HasId> BaseStructFileDb<T> {
+impl<T: serde::Serialize + for<'de> serde::Deserialize<'de>> BaseStructFileDb<T> {
     fn new(file_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         let mut content = String::new();
 
@@ -100,8 +130,6 @@ impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + HasId> BaseStructF
     }
 
     fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.data.sort_by(|a, b| b.id().cmp(&a.id()));
-        
         let content = serde_json::to_string_pretty(&self.data)?;
 
         let tmp_path = format!("{}.tmp", &self.file_path);
@@ -118,11 +146,11 @@ impl<T: serde::Serialize + for<'de> serde::Deserialize<'de> + HasId> BaseStructF
 
     fn reload(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if !fs::exists(&self.file_path)? {
-            if self.data.is_empty() {
-                return Ok(());
+            return if self.data.is_empty() {
+                Ok(())
             } else {
-                return Err(Box::from("File does not exist and data is not empty"));
-            }
+                Err(Box::from("File does not exist and data is not empty"))
+            };
         }
 
         let content = fs::read_to_string(&self.file_path)?;

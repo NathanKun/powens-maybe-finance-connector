@@ -3,6 +3,7 @@
 use super::{Account, AccountsResponse, Transaction, TransactionsResponse};
 use tracing::trace;
 
+#[derive(Clone)]
 pub struct PowensApi {
     token: String,
     domain: String,
@@ -37,7 +38,7 @@ impl PowensApi {
 
     pub async fn get_transactions(&self) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
         let resp = self
-            .get::<TransactionsResponse>("/2.0/users/me/transactions?limit=100")
+            .get::<TransactionsResponse>("/2.0/users/me/transactions?limit=1000")
             .await?;
         Ok(resp.transactions)
     }
