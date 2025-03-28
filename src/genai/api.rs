@@ -1,9 +1,7 @@
 use crate::genai::gemini_response::GeminiResponse;
-use crate::genai::{PROMPT, SimplifiedTransaction};
-use regex::Regex;
 use reqwest::Client;
 use serde_json::json;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 pub async fn call_gemini(prompt: String) -> Result<String, Box<dyn std::error::Error>> {
     debug!("Prompt: \n{}", prompt);

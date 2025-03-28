@@ -41,7 +41,7 @@ impl HasId for TransactionExtras {
 }
 
 impl Sortable for TransactionExtras {
-    fn sortable_value(&self) -> String {
+    fn sortable_value(&self) -> impl Ord {
         self.id.to_string()
     }
 }

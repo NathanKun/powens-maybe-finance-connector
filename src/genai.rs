@@ -2,14 +2,11 @@ mod api;
 mod gemini_response;
 
 use crate::genai::api::call_gemini;
-use crate::genai::gemini_response::GeminiResponse;
 use crate::powens::Transaction;
 use regex::Regex;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::fs;
-use tracing::{debug, info};
+use tracing::{info};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SimplifiedTransaction {
@@ -67,6 +64,10 @@ pub async fn ai_guess_transaction_categories(
         .replace("{EXPENSES_JSON}", &expenses_json);
 
     // call gemini
+    info!(
+        "Calling Gemini to guess category of transaction {}",
+        transaction.id
+    );
     let text = call_gemini(prompt).await?;
 
     // parse response text
@@ -87,7 +88,7 @@ pub async fn ai_guess_transaction_categories(
             }
         }
 
-        debug!("Category: {:?}", categories);
+        info!("Gemini return category: {:?}", categories);
         return Ok(categories);
     }
 

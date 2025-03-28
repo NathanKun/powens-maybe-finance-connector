@@ -1,12 +1,15 @@
+use axum::extract::State;
 use axum::{Router, routing::get};
 use powens_maybe_finance_connector::csv::{AccountCsv, TransactionCsv, VecToCsv};
-use powens_maybe_finance_connector::db::{AccountsDb, TransactionExtras, TransactionExtrasDb, TransactionsDb};
+use powens_maybe_finance_connector::db::{
+    AccountsDb, TransactionExtras, TransactionExtrasDb, TransactionsDb,
+};
+use powens_maybe_finance_connector::genai::ai_guess_transaction_categories;
 use powens_maybe_finance_connector::powens::PowensApi;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
-use axum::extract::State;
 use tracing::info;
-use powens_maybe_finance_connector::genai::ai_guess_transaction_categories;
+use tracing::log::error;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +20,7 @@ async fn main() {
     let account_db: AccountsDb = match AccountsDb::new_account_db() {
         Ok(db) => db,
         Err(e) => {
-            eprintln!("Error creating AccountDb: {}", e);
+            error!("Error creating AccountDb: {:#?}", e);
             return;
         }
     };
@@ -25,24 +28,25 @@ async fn main() {
     let transaction_db: TransactionsDb = match TransactionsDb::new_transaction_db() {
         Ok(db) => db,
         Err(e) => {
-            eprintln!("Error creating TransactionDb: {}", e);
+            error!("Error creating TransactionDb: {:#?}", e);
             return;
         }
     };
 
-    let transaction_extras_db: TransactionExtrasDb = match TransactionExtrasDb::new_transaction_extras_db() {
-        Ok(db) => db,
-        Err(e) => {
-            eprintln!("Error creating TransactionExtrasDb: {}", e);
-            return;
-        }
-    };
+    let transaction_extras_db: TransactionExtrasDb =
+        match TransactionExtrasDb::new_transaction_extras_db() {
+            Ok(db) => db,
+            Err(e) => {
+                error!("Error creating TransactionExtrasDb: {:#?}", e);
+                return;
+            }
+        };
 
-    // init APIs caller
+    // init Powens APIs caller
     let powens_api = match PowensApi::new() {
         Ok(api) => api,
         Err(e) => {
-            eprintln!("Error creating PowensApi: {}", e);
+            error!("Error creating PowensApi: {:#?}", e);
             return;
         }
     };
@@ -57,30 +61,28 @@ async fn main() {
 
     // check and get initial data from powens if needed
     if let Err(e) = get_initial_powens_data_if_empty(&app_state).await {
-        eprintln!("Error initializing data: {}", e);
+        error!("Error initializing data: {:#?}", e);
         return;
+    }
+
+    // do AI guessing to generate transaction extras data on powens transactions
+    // (only for those have no extras data)
+    // run in a seperated thread
+    {
+        let app_state = app_state.clone();
+        tokio::spawn(async move {
+            run_ai_guess_on_all_transactions(&app_state).await;
+        });
     }
 
     // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
-        .route(
-            "/transactions",
-            get(list_transactions_handler),
-        )
-        .route(
-            "/transactions/csv",
-            get(transactions_to_csv_handler),
-        )
-        .route(
-            "/accounts",
-            get(list_accounts_handler),
-        )
-        .route(
-            "/accounts/csv",
-            get(accounts_to_csv_handler),
-        )
+        .route("/transactions", get(list_transactions_handler))
+        .route("/transactions/csv", get(transactions_to_csv_handler))
+        .route("/accounts", get(list_accounts_handler))
+        .route("/accounts/csv", get(accounts_to_csv_handler))
         .route(
             "/test-ai-guess-transaction-categories",
             get(ai_guess_transaction_categories_handler),
@@ -106,7 +108,7 @@ async fn test_reqwest() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 async fn get_initial_powens_data_if_empty(
-    app_state: &AppState
+    app_state: &AppState,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if app_state.account_db.is_data_empty() {
         info!("No data found in account DB, getting data from Powens.");
@@ -120,32 +122,46 @@ async fn get_initial_powens_data_if_empty(
         app_state.transaction_db.save(transactions)?;
     }
 
+    info!("Powens data initialized.");
+
     Ok(())
 }
 
-async fn run_ai_guess_on_all_transactions(transactions_db: &TransactionsDb, transaction_extras_db: &TransactionExtrasDb) {
-    let transactions = transactions_db.data(); // this is a clone of Vec<Transaction> at this moment
+async fn run_ai_guess_on_all_transactions(app_state: &AppState) {
+    let mut transactions = app_state.transaction_db.data(); // this is a clone of Vec<Transaction> at this moment
+
+    // skip if transaction_extras exist & has categories
+    transactions.retain(|t| {
+        let extras = app_state.transaction_extras_db.find_by_id(t.id);
+        extras.is_none() || extras.unwrap().categories.is_empty()
+    });
+
+    info!(
+        "Running AI guessing on {} transactions.",
+        transactions.len()
+    );
+
     for transaction in transactions {
-        // skip if transaction_extras already exist
-        if transaction_extras_db.find_by_id(transaction.id).is_some() {
-            continue;
-        }
-        
         // do ai guessing
         let categories = ai_guess_transaction_categories(&transaction).await.unwrap();
-        
+
         // create new transaction_extras and save
         let transaction_extras: TransactionExtras = TransactionExtras {
             id: transaction.id,
             categories,
             tags: vec![],
         };
-        
-        transaction_extras_db.upsert(transaction_extras).unwrap();
-        
+
+        app_state
+            .transaction_extras_db
+            .upsert(transaction_extras)
+            .unwrap();
+
         // wait 10s to avoid rate limit (gemma 3 is only in free tier and has very strict rate limit)
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
+
+    info!("AI guessing finished.");
 }
 
 async fn ai_guess_transaction_categories_handler(State(app_state): State<AppState>) -> String {
@@ -169,7 +185,10 @@ async fn ai_guess_transaction_categories_handler(State(app_state): State<AppStat
 
     let categories = ai_guess_transaction_categories(&transaction).await.unwrap();
 
-    format!("{}\n{}\n{}\n{:?}", transaction.value, transaction.original_wording, transaction.simplified_wording, categories)
+    format!(
+        "{}\n{}\n{}\n{:?}",
+        transaction.value, transaction.original_wording, transaction.simplified_wording, categories
+    )
 }
 
 async fn list_transactions_handler(State(app_state): State<AppState>) -> String {
@@ -178,21 +197,22 @@ async fn list_transactions_handler(State(app_state): State<AppState>) -> String 
 
 async fn transactions_to_csv_handler(State(app_state): State<AppState>) -> String {
     let account_db = &app_state.account_db;
-    let transactions_csv: Vec<TransactionCsv> =
-        (&app_state.transaction_db).data().iter()
-            .map(|it| {
-                let mut transaction_csv: TransactionCsv = it.into();
+    let transactions_csv: Vec<TransactionCsv> = (&app_state.transaction_db)
+        .data()
+        .iter()
+        .map(|it| {
+            let mut transaction_csv: TransactionCsv = it.into();
 
-                let account = account_db.find_by_id(it.id_account).unwrap();
-                transaction_csv.set_account(&account);
+            let account = account_db.find_by_id(it.id_account).unwrap();
+            transaction_csv.set_account(&account);
 
-                if let Some(extras) = app_state.transaction_extras_db.find_by_id(it.id) {
-                    transaction_csv.set_extras(&extras);
-                }
+            if let Some(extras) = app_state.transaction_extras_db.find_by_id(it.id) {
+                transaction_csv.set_extras(&extras);
+            }
 
-                transaction_csv
-            })
-            .collect();
+            transaction_csv
+        })
+        .collect();
     transactions_csv.to_csv()
 }
 
@@ -201,8 +221,11 @@ async fn list_accounts_handler(State(app_state): State<AppState>) -> String {
 }
 
 async fn accounts_to_csv_handler(State(app_state): State<AppState>) -> String {
-    let accounts_csv: Vec<AccountCsv> =
-        (&app_state.account_db).data().iter().map(|it| it.into()).collect();
+    let accounts_csv: Vec<AccountCsv> = (&app_state.account_db)
+        .data()
+        .iter()
+        .map(|it| it.into())
+        .collect();
     accounts_csv.to_csv()
 }
 
