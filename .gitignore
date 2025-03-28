@@ -2,3 +2,4 @@
 /.idea
 /db
 .env
+/ai-prompts/*.json

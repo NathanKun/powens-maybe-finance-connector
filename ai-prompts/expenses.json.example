@@ -1,0 +1,198 @@
+{
+  "Housing/Loan": {
+    "Loan Payments": {
+      "examples": [
+        "ECHEANCE PRET"
+      ]
+    },
+    "Condo Fees": {
+      "examples": [
+        "SYNDIC"
+      ]
+    }
+  },
+  "Groceries & Food": {
+    "Groceries": {
+      "examples": [
+        "AUCHAN",
+        "INTERMARCHE",
+        "AMAZON PRIME NOW",
+        "GRAND FRAIS",
+        "WAYSIA",
+        "LE REGIME DE VERO",
+        "HUEL.COM",
+        "WWW.FOODLES.CO",
+        "ECP00000CARREF",
+        "Swile"
+      ]
+    },
+    "Restaurants": {
+      "examples": [
+        "DELIVEROO",
+        "ECP00000PAUL1",
+        "ECP00000PAUL2",
+        "ECP00000MCDO",
+        "BRIOCHE DOREE",
+        "O BAR LIE",
+        "LES PIANOS",
+        "VAPIANO",
+        "INALIS",
+        "KIRAKU",
+        "ECP00000COCOON3"
+      ]
+    }
+  },
+  "Shopping": {
+    "Clothing": {
+      "examples": [
+        "Uniqlo",
+        "ZARA",
+        "ABERCROMBIE AND FITCH",
+        "C ET A FRANCE*"
+      ]
+    },
+    "Home Goods/Furniture": {
+      "examples": [
+        "IKEA",
+        "WWW.IKEA.FR",
+        "MAISONS DU MONDE",
+        "HERMAN MILLER LTD"
+      ]
+    },
+    "Electronics": {
+      "examples": [
+        "FNAC.COM",
+        "FnacDirect",
+        "Boulanger",
+        "Dyson SAS"
+      ]
+    },
+    "Cosmetics": {
+      "examples": [
+        "YVES ROCHER",
+        "LUSH VELIZY"
+      ]
+    },
+    "Pharmacy": {
+      "examples": [
+        "SC-PHARMA.AUDE",
+        "PHIE DU CENTRE"
+      ]
+    },
+    "examples": [
+      "AMAZON EU SARL",
+      "AMAZON PAYMENTS COMMERCE ELECTRONIQUE"
+    ]
+  },
+  "Bills & Utilities": {
+    "Mobile": {
+      "examples": [
+        "FREE MOBILE"
+      ]
+    },
+    "Internet": {
+      "examples": [
+        "Free Telecom"
+      ]
+    },
+    "Electricity": {
+      "examples": [
+        "EDF clients particuliers"
+      ]
+    }
+  },
+  "Subscriptions": {
+    "examples":[
+      "AMAZON PRIME FR",
+      "Spotify France",
+      "Google GSUITE_viecasa.co",
+      "Google CLOUD",
+      "AWS EMEA",
+      "HP Inc Instant Ink FR",
+      "OPENAI *CHATGPT SUBSCR",
+      "CBA*ACRONIS"
+    ]
+  },
+  "Transportation": {
+    "Public Transport": {
+      "examples": [
+        "COMUTITRES SAS-SIG"
+      ]
+    },
+    "Tolls": {
+      "examples": [
+        "AUTOROUTES DU SUD DE LA FRANCE"
+      ]
+    },
+    "EV Charging": {
+      "examples": [
+        "GC RE IZIVIA",
+        "CHARGEMAP"
+      ]
+    },
+    "Parking": {
+      "examples": [
+        "VOIERIE SCEAUX"
+      ]
+    }
+  },
+  "Health & Wellness": {
+    "examples": [
+      "POLE DENTAIRE D",
+      "MME VASSEUX CELI"
+    ]
+  },
+  "Personal Care": {
+    "examples": [
+      "COIFF JL DAVID"
+    ]
+  },
+  "Services": {
+    "Security": {
+      "examples": [
+        "VERISURE"
+      ]
+    },
+    "Insurance": {
+      "examples": [
+        "GESTION ASSURANCES",
+        "MATMUT"
+      ]
+    },
+    "Rental": {
+      "examples": [
+        "COMPAGNIE GENERALE DE LOCATION-COMP"
+      ]
+    },
+    "Laundry/Dry Cleaning": {
+      "examples": [
+        "5 A SEC"
+      ]
+    },
+    "Car Wash": {
+      "examples": [
+        "SARL L2R"
+      ]
+    },
+    "Other": {
+      "examples": [
+        "IMPRIMERIE NATIO"
+      ]
+    }
+  },
+  "Other Expenses": {
+    "Transfers": {
+      "examples": [
+        "VIR EUROPEEN EMIS LOGITEL",
+        "VIR INSTANTANE EMIS LOGITEL"
+      ]
+    },
+    "Fees": {
+      "examples": [
+        "FRAIS",
+        "COTISATION",
+        "COTIS"
+      ]
+    }
+  }
+}

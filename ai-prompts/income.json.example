@@ -1,0 +1,22 @@
+{
+  "Salary": {
+    "examples": [
+      "Salary",
+      "SALAIRE"
+    ]
+  },
+  "Refunds": {
+    "examples": [
+      "WAYSIA",
+      "LBC France SAS",
+      "ADMIRAL INTERMEDIARY SERVICES SA",
+      "CPAM HAUTS DE SEINE SEPA",
+      "KENKO"
+    ]
+  },
+  "Transfers In": {
+    "examples": [
+      "VIR RECU"
+    ]
+  }
+}

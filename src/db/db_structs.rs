@@ -45,3 +45,13 @@ impl Sortable for TransactionExtras {
         self.id.to_string()
     }
 }
+
+pub type TransactionExtrasDb = StructFileDb<TransactionExtras>;
+
+impl TransactionExtrasDb {
+    pub fn new_transaction_extras_db() -> Result<Self, Box<dyn std::error::Error>> {
+        let res = StructFileDb::<TransactionExtras>::new("db/transaction_extras.json".to_string());
+        info!("Transaction Extras DB initialized.");
+        res
+    }
+}
