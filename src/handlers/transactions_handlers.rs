@@ -72,6 +72,8 @@ pub async fn transactions_to_csv_handler(State(app_state): State<AppState>) -> S
     let transactions_csv: Vec<TransactionCsv> = (&app_state.transaction_db)
         .data()
         .iter()
+        // skip those coming == true
+        .filter(|it| !it.coming)
         .map(|it| {
             let mut transaction_csv: TransactionCsv = it.into();
 
