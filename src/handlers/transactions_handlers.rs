@@ -1,14 +1,22 @@
 use axum::extract::State;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use tracing::info;
-use tracing::log::error;
+use tracing::error;
 use crate::app_state::AppState;
 use crate::csv::{TransactionCsv, VecToCsv};
 use crate::genai::run_ai_guess_on_all_transactions;
 use crate::powens::POWENS_DATETIME_FORMAT;
 
 pub async fn fetch_transactions_from_powens_handler(State(app_state): State<AppState>) -> String {
+    run_fetch_transactions_from_powens_job(app_state);
+
+    "Job started".to_string()
+}
+
+pub fn run_fetch_transactions_from_powens_job(app_state: AppState) {
     tokio::spawn(async move {
+        info!("Starting job to fetch transactions from Powens.");
+        
         let mut latest_last_update: Option<DateTime<Utc>> = None;
 
         let existing_transactions = app_state.transaction_db.data();
@@ -57,8 +65,6 @@ pub async fn fetch_transactions_from_powens_handler(State(app_state): State<AppS
 
         info!("Job finished.");
     });
-
-    "Job started".to_string()
 }
 
 pub async fn transactions_to_csv_handler(State(app_state): State<AppState>) -> String {
