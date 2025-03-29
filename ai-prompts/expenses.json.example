@@ -81,7 +81,8 @@
     },
     "examples": [
       "AMAZON EU SARL",
-      "AMAZON PAYMENTS COMMERCE ELECTRONIQUE"
+      "AMAZON PAYMENTS COMMERCE ELECTRONIQUE",
+       "PayPal"
     ]
   },
   "Bills & Utilities": {
