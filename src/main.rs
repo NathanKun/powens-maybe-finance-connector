@@ -107,7 +107,6 @@ fn run_ai_guess_job(app_state: &AppState) {
 }
 
 async fn fetch_transactions_from_powens_handler(State(app_state): State<AppState>) -> String {
-    // TODO: use last_update param. search in DB to find the latest last_update, pass it in API param.
     tokio::spawn(async move {
         let mut latest_last_update: Option<DateTime<Utc>> = None;
 
