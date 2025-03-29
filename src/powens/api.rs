@@ -1,7 +1,10 @@
 //! Struct and methods to call Powens' APIs
 
+use chrono::{DateTime, Utc};
 use super::{Account, AccountsResponse, Transaction, TransactionsResponse};
 use tracing::{debug, error};
+
+pub const POWENS_DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
 #[derive(Clone)]
 pub struct PowensApi {
@@ -37,9 +40,16 @@ impl PowensApi {
         }
     }
 
-    pub async fn get_transactions(&self) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
+    pub async fn get_transactions(&self, latest_last_update: Option<DateTime<Utc>>) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
+        let last_update: String = if let Some(latest_last_update) = latest_last_update {
+            let value = latest_last_update.format(POWENS_DATETIME_FORMAT).to_string();
+            format!("&last_update={}", value)
+        } else {
+            String::new()
+        };
+        
         let resp = self
-            .get::<TransactionsResponse>("/2.0/users/me/transactions?limit=1000")
+            .get::<TransactionsResponse>(&format!("/2.0/users/me/transactions?limit=1000{last_update}"))
             .await?;
         Ok(resp.transactions)
     }

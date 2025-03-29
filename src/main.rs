@@ -1,12 +1,12 @@
 use axum::extract::State;
 use axum::{Router, routing::get};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use powens_maybe_finance_connector::csv::{AccountCsv, TransactionCsv, VecToCsv};
 use powens_maybe_finance_connector::db::{
     AccountsDb, TransactionExtras, TransactionExtrasDb, TransactionsDb,
 };
 use powens_maybe_finance_connector::genai::ai_guess_transaction_categories;
-use powens_maybe_finance_connector::powens::PowensApi;
-use std::collections::HashMap;
+use powens_maybe_finance_connector::powens::{POWENS_DATETIME_FORMAT, PowensApi};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::info;
 use tracing::log::error;
@@ -68,12 +68,7 @@ async fn main() {
     // do AI guessing to generate transaction extras data on powens transactions
     // (only for those have no extras data)
     // run in a seperated thread
-    {
-        let app_state = app_state.clone();
-        tokio::spawn(async move {
-            run_ai_guess_on_all_transactions(&app_state).await;
-        });
-    }
+    run_ai_guess_job(&app_state);
 
     // build our application with a route
     let app = Router::new()
@@ -81,6 +76,10 @@ async fn main() {
         .route("/", get(root))
         .route("/transactions", get(list_transactions_handler))
         .route("/transactions/csv", get(transactions_to_csv_handler))
+        .route(
+            "/transactions/fetch",
+            get(fetch_transactions_from_powens_handler),
+        )
         .route("/accounts", get(list_accounts_handler))
         .route("/accounts/csv", get(accounts_to_csv_handler))
         .route(
@@ -95,16 +94,71 @@ async fn main() {
 }
 
 async fn root() -> String {
-    test_reqwest().await.unwrap()
+    "ok".to_string()
 }
 
-async fn test_reqwest() -> Result<String, Box<dyn std::error::Error>> {
-    let resp = reqwest::get("https://httpbin.org/ip")
-        .await?
-        .json::<HashMap<String, String>>()
-        .await?;
-    println!("{resp:#?}");
-    Ok(resp["origin"].to_string())
+fn run_ai_guess_job(app_state: &AppState) {
+    let app_state = app_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = run_ai_guess_on_all_transactions(app_state).await {
+            error!("Error running AI guessing: {:#?}", e);
+        }
+    });
+}
+
+async fn fetch_transactions_from_powens_handler(State(app_state): State<AppState>) -> String {
+    // TODO: use last_update param. search in DB to find the latest last_update, pass it in API param.
+    tokio::spawn(async move {
+        let mut latest_last_update: Option<DateTime<Utc>> = None;
+
+        let existing_transactions = app_state.transaction_db.data();
+        if !existing_transactions.is_empty() {
+            for transaction in existing_transactions {
+                let last_update =
+                    NaiveDateTime::parse_from_str(&transaction.last_update, POWENS_DATETIME_FORMAT);
+                if let Ok(last_update) = last_update {
+                    let last_update: DateTime<Utc> = last_update.and_utc();
+                    if let Some(latest_last_update_inner) = latest_last_update {
+                        if last_update > latest_last_update_inner {
+                            latest_last_update = Some(last_update);
+                        }
+                    } else {
+                        latest_last_update = Some(last_update);
+                    }
+                }
+            }
+        }
+
+        if let Some(latest_last_update) = latest_last_update {
+            info!("last_update: {}", latest_last_update);
+        } else {
+            info!("No last_update, fetching last 1000 transactions.")
+        }
+
+        info!("Starting job to fetch transactions from Powens.");
+        if let Ok(transactions) = app_state
+            .powens_api
+            .get_transactions(latest_last_update)
+            .await
+        {
+            info!("Fetched {} transactions from Powens.", transactions.len());
+            for transaction in transactions {
+                if let Err(e) = app_state.transaction_db.upsert(transaction) {
+                    error!("Error saving transaction: {:#?}", e);
+                }
+            }
+            info!("Transactions saved.");
+        }
+
+        // run ai guessing
+        if let Err(e) = run_ai_guess_on_all_transactions(app_state).await {
+            error!("Error running AI guessing: {:#?}", e);
+        }
+
+        info!("Job finished.");
+    });
+
+    "Job started".to_string()
 }
 
 async fn get_initial_powens_data_if_empty(
@@ -118,7 +172,7 @@ async fn get_initial_powens_data_if_empty(
 
     if app_state.transaction_db.is_data_empty() {
         info!("No data found in transaction DB, getting data from Powens.");
-        let transactions = app_state.powens_api.get_transactions().await?;
+        let transactions = app_state.powens_api.get_transactions(None).await?;
         app_state.transaction_db.save(transactions)?;
     }
 
@@ -127,7 +181,9 @@ async fn get_initial_powens_data_if_empty(
     Ok(())
 }
 
-async fn run_ai_guess_on_all_transactions(app_state: &AppState) {
+async fn run_ai_guess_on_all_transactions(
+    app_state: AppState,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut transactions = app_state.transaction_db.data(); // this is a clone of Vec<Transaction> at this moment
 
     // skip if transaction_extras exist & has categories
@@ -143,7 +199,7 @@ async fn run_ai_guess_on_all_transactions(app_state: &AppState) {
 
     for transaction in transactions {
         // do ai guessing
-        let categories = ai_guess_transaction_categories(&transaction).await.unwrap();
+        let categories = ai_guess_transaction_categories(&transaction).await?;
 
         // create new transaction_extras and save
         let transaction_extras: TransactionExtras = TransactionExtras {
@@ -152,16 +208,14 @@ async fn run_ai_guess_on_all_transactions(app_state: &AppState) {
             tags: vec![],
         };
 
-        app_state
-            .transaction_extras_db
-            .upsert(transaction_extras)
-            .unwrap();
+        app_state.transaction_extras_db.upsert(transaction_extras)?;
 
         // wait 10s to avoid rate limit (gemma 3 is only in free tier and has very strict rate limit)
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
 
     info!("AI guessing finished.");
+    Ok(())
 }
 
 async fn ai_guess_transaction_categories_handler(State(app_state): State<AppState>) -> String {
