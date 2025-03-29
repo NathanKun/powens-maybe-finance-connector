@@ -118,8 +118,10 @@ async fn main() {
             TimeoutLayer::new(Duration::from_secs(10)),
         ));
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    // run our app with hyper, listening globally on port AXUM_PORT
+    let port = dotenv::var("AXUM_PORT").unwrap();
+    let bind_addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(bind_addr).await.unwrap();
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
