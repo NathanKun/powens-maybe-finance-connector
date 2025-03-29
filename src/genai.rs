@@ -7,6 +7,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use tracing::{info};
+use crate::app_state::AppState;
+use crate::db::TransactionExtras;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SimplifiedTransaction {
@@ -24,6 +26,40 @@ impl From<&Transaction> for SimplifiedTransaction {
         }
     }
 }
+
+const PROMPT: &str = r#"
+You are an expert transaction classifier designed to categorize financial transactions into predefined categories and subcategories.
+
+**Input:**
+
+1.  **Category and Subcategory Definitions (JSON):**
+Income
+```json
+{INCOME_JSON}
+```
+
+Expenses
+```json
+{EXPENSES_JSON}
+```
+
+2.  **Transaction Description :**
+```json
+{TRANSACTION_JSON}
+```
+
+**Instructions:**
+
+1.  Analyze the provided transaction description.
+2.  Match the transaction to the most appropriate category and, if applicable, subcategory from the provided JSON.
+3.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
+4.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
+5.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
+6.  Assume the transaction description may be in French.
+
+**Output (JSON Array)**
+
+"#;
 
 pub async fn ai_guess_transaction_categories(
     transaction: &Transaction,
@@ -95,36 +131,39 @@ pub async fn ai_guess_transaction_categories(
     Err("Failed to parse JSON".into())
 }
 
-const PROMPT: &str = r#"
-You are an expert transaction classifier designed to categorize financial transactions into predefined categories and subcategories.
+pub async fn run_ai_guess_on_all_transactions(
+    app_state: AppState,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut transactions = app_state.transaction_db.data(); // this is a clone of Vec<Transaction> at this moment
 
-**Input:**
+    // skip if transaction_extras exist & has categories
+    transactions.retain(|t| {
+        let extras = app_state.transaction_extras_db.find_by_id(t.id);
+        extras.is_none() || extras.unwrap().categories.is_empty()
+    });
 
-1.  **Category and Subcategory Definitions (JSON):**
-Income
-```json
-{INCOME_JSON}
-```
+    info!(
+        "Running AI guessing on {} transactions.",
+        transactions.len()
+    );
 
-Expenses
-```json
-{EXPENSES_JSON}
-```
+    for transaction in transactions {
+        // do ai guessing
+        let categories = ai_guess_transaction_categories(&transaction).await?;
 
-2.  **Transaction Description :**
-```json
-{TRANSACTION_JSON}
-```
+        // create new transaction_extras and save
+        let transaction_extras: TransactionExtras = TransactionExtras {
+            id: transaction.id,
+            categories,
+            tags: vec![],
+        };
 
-**Instructions:**
+        app_state.transaction_extras_db.upsert(transaction_extras)?;
 
-1.  Analyze the provided transaction description.
-2.  Match the transaction to the most appropriate category and, if applicable, subcategory from the provided JSON.
-3.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
-4.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
-5.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
-6.  Assume the transaction description may be in French.
+        // wait 10s to avoid rate limit (gemma 3 is only in free tier and has very strict rate limit)
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    }
 
-**Output (JSON Array)**
-
-"#;
+    info!("AI guessing finished.");
+    Ok(())
+}
