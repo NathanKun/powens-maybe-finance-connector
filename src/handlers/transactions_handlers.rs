@@ -2,13 +2,11 @@ use crate::app_state::AppState;
 use crate::csv::{TransactionCsv, VecToCsv};
 use crate::genai::run_ai_guess_on_all_transactions;
 use crate::powens::POWENS_DATETIME_FORMAT;
-use axum::http::{HeaderName, HeaderValue, Response};
-use axum::response::{IntoResponseParts, ResponseParts};
+use axum::http::Response;
 use axum::{
     body::Body,
     extract::{Query, State},
     http::header,
-    response::IntoResponse,
 };
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;

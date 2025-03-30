@@ -181,6 +181,17 @@
       ]
     }
   },
+  "Sport": {
+    "examples": [
+      "UCPA",
+      "PILATES"
+    ]
+  },
+  "Entertainment": {
+    "examples": [
+        "cinema"
+    ]
+  },
   "Other Expenses": {
     "Transfers": {
       "examples": [

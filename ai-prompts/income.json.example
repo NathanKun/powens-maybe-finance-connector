@@ -5,13 +5,24 @@
       "SALAIRE"
     ]
   },
+  "Resale": {
+    "examples": [
+      "LBC",
+      "Leboncoin",
+      "back market"
+    ]
+  },
   "Refunds": {
     "examples": [
       "WAYSIA",
       "LBC France SAS",
-      "ADMIRAL INTERMEDIARY SERVICES SA",
-      "CPAM HAUTS DE SEINE SEPA",
-      "KENKO"
+      "ADMIRAL INTERMEDIARY SERVICES SA"
+    ]
+  },
+  "Social Security Reimbursement": {
+    "examples": [
+      "KENKO",
+      "CPAM"
     ]
   },
   "Transfers In": {

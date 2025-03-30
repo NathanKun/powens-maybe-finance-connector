@@ -43,7 +43,7 @@ Expenses
 {EXPENSES_JSON}
 ```
 
-2.  **Transaction Description :**
+2.  **Transaction :**
 ```json
 {TRANSACTION_JSON}
 ```
@@ -52,10 +52,11 @@ Expenses
 
 1.  Analyze the provided transaction description.
 2.  Match the transaction to the most appropriate category and, if applicable, subcategory from the provided JSON.
-3.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
-4.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
-5.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
-6.  Assume the transaction description may be in French.
+3.  For positive transactions, use the "Income" json. For negative transactions, use the "Expenses" json.
+4.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
+5.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
+6.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
+7.  Assume the transaction description may be in French.
 
 **Output (JSON Array)**
 
