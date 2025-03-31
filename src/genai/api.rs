@@ -1,10 +1,10 @@
 use crate::genai::gemini_response::GeminiResponse;
 use reqwest::Client;
 use serde_json::json;
-use tracing::{debug, warn};
+use tracing::{trace, warn};
 
 pub async fn call_gemini(prompt: String) -> Result<String, Box<dyn std::error::Error>> {
-    debug!("Prompt: \n{}", prompt);
+    trace!("Prompt: \n{}", prompt);
 
     // The request URL with the API key
     let api_key = dotenv::var("GEMINI_API_KEY")?;

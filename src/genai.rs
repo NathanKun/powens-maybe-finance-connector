@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use tracing::{info};
+use tracing::log::debug;
 use crate::app_state::AppState;
 use crate::db::TransactionExtras;
 
@@ -105,6 +106,7 @@ pub async fn ai_guess_transaction_categories(
         "Calling Gemini to guess category of transaction {}",
         transaction.id
     );
+    debug!("{:#?}", input_transaction);
     let text = call_gemini(prompt).await?;
 
     // parse response text
@@ -125,7 +127,7 @@ pub async fn ai_guess_transaction_categories(
             }
         }
 
-        info!("Gemini return category: {:?}", categories);
+        debug!("Gemini return category: {:?}", categories);
         return Ok(categories);
     }
 
