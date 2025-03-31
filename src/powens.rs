@@ -1,7 +1,6 @@
 mod transaction;
 mod account;
 mod api;
-mod webhook;
 
 pub use self::transaction::*;
 pub use self::account::*;
