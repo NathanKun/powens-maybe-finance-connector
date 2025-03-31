@@ -13,7 +13,8 @@ pub struct GeminiResponse {
 pub struct Candidate {
     pub content: Content,
     pub finish_reason: String,
-    pub index: i64,
+    pub index: Option<i64>,
+    pub avg_logprobs: Option<f64>
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -36,6 +37,7 @@ pub struct UsageMetadata {
     pub candidates_token_count: i64,
     pub total_token_count: i64,
     pub prompt_tokens_details: Vec<PromptTokensDetail>,
+    pub candidates_tokens_details: Vec<PromptTokensDetail>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

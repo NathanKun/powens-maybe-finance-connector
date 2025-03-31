@@ -3,35 +3,45 @@ use reqwest::Client;
 use serde_json::json;
 use tracing::{trace, warn};
 
-pub async fn call_gemini(prompt: String) -> Result<String, Box<dyn std::error::Error>> {
-    trace!("Prompt: \n{}", prompt);
+const MODEL_ID: &str = "gemini-2.0-flash";
+
+pub async fn call_gemini(
+    system_prompt: String,
+    user_prompt: String,
+) -> Result<String, Box<dyn std::error::Error>> {
+    trace!("system_prompt: \n{}", system_prompt);
+    trace!("user_prompt: \n{}", user_prompt);
 
     // The request URL with the API key
     let api_key = dotenv::var("GEMINI_API_KEY")?;
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key={}",
-        api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent?key={api_key}"
     );
 
     // JSON body data
     let body = json!({
         "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": prompt
-                    }
-                ]
-            }
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": user_prompt
+              },
+            ]
+          },
         ],
+        "systemInstruction": {
+          "parts": [
+            {
+                "text": system_prompt
+            },
+          ]
+        },
         "generationConfig": {
-            "temperature": 0.5,
-            "topK": 64,
-            "topP": 0.98,
-            "maxOutputTokens": 1024,
-            "responseMimeType": "text/plain"
-        }
+          "temperature": 0.5,
+          "topP": 1,
+          "responseMimeType": "application/json",
+        },
     });
 
     // Create an HTTP client
@@ -47,7 +57,9 @@ pub async fn call_gemini(prompt: String) -> Result<String, Box<dyn std::error::E
 
     // Check for success and print the response
     if response.status().is_success() {
-        let response: GeminiResponse = serde_json::from_str(&response.text().await?)?;
+        let text = &response.text().await?;
+        trace!("response: \n{}", &text);
+        let response: GeminiResponse = serde_json::from_str(text)?;
         Ok(response
             .candidates
             .get(0)

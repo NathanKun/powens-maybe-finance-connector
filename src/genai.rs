@@ -33,31 +33,29 @@ You are an expert transaction classifier designed to categorize financial transa
 
 **Input:**
 
-1.  **Category and Subcategory Definitions (JSON):**
+**Category and Subcategory Definitions (JSON):**
 Income
 ```json
 {INCOME_JSON}
 ```
+
 
 Expenses
 ```json
 {EXPENSES_JSON}
 ```
 
-2.  **Transaction :**
-```json
-{TRANSACTION_JSON}
-```
 
 **Instructions:**
 
 1.  Analyze the provided transaction description.
 2.  Match the transaction to the most appropriate category and, if applicable, subcategory from the provided JSON.
-3.  For positive transactions, use the "Income" json. For negative transactions, use the "Expenses" json.
-4.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
-5.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
-6.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
-7.  Assume the transaction description may be in French.
+3.  The "examples" field in the JSON is a list of examples of transactions wording that fit into the category, but it is not exhaustive.
+4.  For positive transactions, use the "Income" json. For negative transactions, use the "Expenses" json.
+5.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
+6.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
+7.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
+8.  Assume the transaction description may be in French.
 
 **Output (JSON Array)**
 
@@ -92,14 +90,11 @@ pub async fn ai_guess_transaction_categories(
         .unwrap_or_else(|_| fs::read_to_string("ai-prompts/expenses.json.example").unwrap());
 
     // final prompt
-    let prompt = PROMPT
+    let system_prompt = PROMPT
         .to_string()
-        .replace(
-            "{TRANSACTION_JSON}",
-            serde_json::to_string(&input_transaction)?.as_str(),
-        )
         .replace("{INCOME_JSON}", &income_json)
         .replace("{EXPENSES_JSON}", &expenses_json);
+    let user_prompt = serde_json::to_string(&input_transaction)?;
 
     // call gemini
     info!(
@@ -107,12 +102,11 @@ pub async fn ai_guess_transaction_categories(
         transaction.id
     );
     debug!("{:#?}", input_transaction);
-    let text = call_gemini(prompt).await?;
+    let text = call_gemini(system_prompt, user_prompt).await?;
 
     // parse response text
-    if text.starts_with("```json\n") && text.ends_with("\n```") {
-        let json_str = &text[8..text.len() - 3];
-        let json: serde_json::Value = serde_json::from_str(json_str)?;
+    if text.starts_with("[") && text.ends_with("]") {
+        let json: serde_json::Value = serde_json::from_str(&text)?;
         let mut categories: Vec<String> = json
             .as_array()
             .unwrap()
@@ -163,8 +157,8 @@ pub async fn run_ai_guess_on_all_transactions(
 
         app_state.transaction_extras_db.upsert(transaction_extras)?;
 
-        // wait 10s to avoid rate limit (gemma 3 is only in free tier and has very strict rate limit)
-        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        // avoid rate limit if free tier
+        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
     }
 
     info!("AI guessing finished.");
