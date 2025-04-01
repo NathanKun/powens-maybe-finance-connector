@@ -23,7 +23,8 @@
         "HUEL.COM",
         "WWW.FOODLES.CO",
         "ECP00000CARREF",
-        "Swile"
+        "Swile",
+        "MaxiCoffee"
       ]
     },
     "Restaurants": {
@@ -133,7 +134,8 @@
     },
     "Parking": {
       "examples": [
-        "VOIERIE SCEAUX"
+        "VOIERIE SCEAUX",
+        "QPLD"
       ]
     }
   },
@@ -157,7 +159,8 @@
     "Insurance": {
       "examples": [
         "GESTION ASSURANCES",
-        "MATMUT"
+        "MATMUT",
+        "SOGESSUR"
       ]
     },
     "Rental": {
@@ -203,8 +206,13 @@
       "examples": [
         "FRAIS",
         "COTISATION",
-        "COTIS"
+        "COTIS",
+        "AMENDE.GOUV",
+        "IMPOT"
       ]
-    }
+    },
+    "examples": [
+      "Leetchi"
+    ]
   }
 }

@@ -50,12 +50,10 @@ Expenses
 
 1.  Analyze the provided transaction description.
 2.  Match the transaction to the most appropriate category and, if applicable, subcategory from the provided JSON.
-3.  The "examples" field in the JSON is a list of examples of transactions wording that fit into the category, but it is not exhaustive.
+3.  The "examples" field in the JSON is a list of examples of transactions wording that fit into the category, but it is not exhaustive, try your best to guess a category, if really unsure, use "Other Expenses".
 4.  For positive transactions, use the "Income" json. For negative transactions, use the "Expenses" json.
-5.  If a direct match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
-6.  If the transaction doesn't fit into an existing category, propose a new category in the JSON array, appending "(Suggest)" to the category name(s).
-7.  Prioritize existing categories over suggesting new ones. Only suggest category, don't suggest subcategory.
-8.  Assume the transaction description may be in French.
+5.  If a match is found, return a JSON array containing the category and, if relevant, the subcategory. Do not include "Expenses" or "Income", they are not a category.
+7.  Assume the transaction description may be in French.
 
 **Output (JSON Array)**
 
@@ -158,7 +156,7 @@ pub async fn run_ai_guess_on_all_transactions(
         app_state.transaction_extras_db.upsert(transaction_extras)?;
 
         // avoid rate limit if free tier
-        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+        // tokio::time::sleep(std::time::Duration::from_secs(4)).await;
     }
 
     info!("AI guessing finished.");
