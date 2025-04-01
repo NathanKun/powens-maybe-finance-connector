@@ -80,7 +80,7 @@ pub struct Transaction {
 
     /// Type of transaction.
     #[serde(rename = "type")]
-    pub type_field: TransactionType,
+    pub transaction_type: TransactionType,
 
     /// No official doc. Seems to be a formatted string with the transaction value, currency symbol, and a localized digit seperator.
     /// Example: "-20,00 €"

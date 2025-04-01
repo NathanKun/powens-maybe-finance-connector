@@ -2,7 +2,7 @@ mod api;
 mod gemini_response;
 
 use crate::genai::api::call_gemini;
-use crate::powens::Transaction;
+use crate::powens::{Transaction, TransactionType};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -15,7 +15,8 @@ use crate::db::TransactionExtras;
 pub struct SimplifiedTransaction {
     pub value: f64,
     pub original_wording: String,
-    pub simplified_wording: String,
+    pub stemmed_wording: String,
+    pub transaction_type: TransactionType,
 }
 
 impl From<&Transaction> for SimplifiedTransaction {
@@ -23,7 +24,8 @@ impl From<&Transaction> for SimplifiedTransaction {
         Self {
             value: transaction.value,
             original_wording: transaction.original_wording.clone(),
-            simplified_wording: transaction.simplified_wording.clone(),
+            stemmed_wording: transaction.stemmed_wording.clone(),
+            transaction_type: transaction.transaction_type.clone(),
         }
     }
 }
@@ -75,8 +77,8 @@ pub async fn ai_guess_transaction_categories(
         input_transaction.original_wording = regex
             .replace_all(&input_transaction.original_wording, *replace)
             .to_string();
-        input_transaction.simplified_wording = regex
-            .replace_all(&input_transaction.simplified_wording, *replace)
+        input_transaction.stemmed_wording = regex
+            .replace_all(&input_transaction.stemmed_wording, *replace)
             .to_string();
     }
 
