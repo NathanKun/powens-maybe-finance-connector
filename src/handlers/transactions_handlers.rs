@@ -95,6 +95,12 @@ pub async fn transactions_to_csv_handler(
         }
     }
 
+    if let Some(last_update) = last_update {
+        info!("Generate transactions CSV with last update: {:#?}", last_update);
+    } else {
+        info!("Generate all transactions CSV");
+    }
+
     // filter transactions
     let mut transaction = (&app_state.transaction_db).data();
     // keep those coming == false
@@ -113,6 +119,7 @@ pub async fn transactions_to_csv_handler(
     // if empty, end
     if transaction.is_empty() {
         let res_str = if let Some(last_update_str) = &params.last_update {
+            info!("Total {} transactions found for last update {:#?}.", transaction.len(), last_update);
             format!("No transactions found with last_update > {last_update_str} found")
         } else {
             "No transactions found.".to_string()
